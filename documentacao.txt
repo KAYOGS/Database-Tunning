@@ -1,0 +1,4 @@
+Em um banco de dados é muito mais custoso fazer consultas usando * ao invés de colunas específicas.
+
+ex de consulta usando *:
+select * from categoriasestantes ces;
