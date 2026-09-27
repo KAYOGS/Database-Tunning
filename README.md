@@ -1,5 +1,6 @@
 # Database-Tunning
 
+Prazo de envio 30/10/2026 - 23:30
 
 Estudo independente orientado pelas Unidades de Aprendizagem, resolução de estudos de caso,
 atendimento do professor nos fóruns e nos encontros síncronos e desenvolvimento do projeto final.
