@@ -1,0 +1,13 @@
+O Hardware utilizado para a realização deste trabalho é um notebook aspire acer 5.
+
+Especificacoes:
+- Arquitetura: x86_64
+- Processador: i5 10 geração
+- Memoria RAM: 20gb - ddr4 flex mode 1x4 e 1x16 (8gb dual channel e 12gb single channel)
+- Armazenamento: 512gb SSD nvme
+- Placa de Video: UHD Graphics integrada
+- Sistema Operacional: Debian 13 - Mate DE
+
+Programas utilizados:
+- sqlite3
+- dbeaver
