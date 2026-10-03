@@ -1,4 +1,37 @@
-Em um banco de dados é muito mais custoso fazer consultas usando * ao invés de colunas específicas.
+Na etapa 1 dos testes realizados foi feito um plano de execução para encontrar problemas de otimização nas consultas. Um ponto importante que merece uma atenção é o fato do hardware ser forte, que, por sinal afetou de forma significativa no tempo de leitura da base de dados.
 
-ex de consulta usando *:
-select * from categoriasestantes ces;
+As consultas 1 e 3 foram as que mais apresentaram um bom tempo de resposta, mesmo que por debaixo dos panos eles estavam desperdiçando processamento escaneando totalmente as tabelas.
+
+A consulta 2 ficou como segundo colocado no tempo de processamento, demonstrando forte impacto negativo na parte do join entre as tabelas, que, logo após precisaram passar por um agrupamento onde a falta de indices fez com que o desempenho ou a falta dele fosse visivel por conta de um agrupamento global.
+
+A consulta 4 foi a primeira lugar em consumo de hardware. Esse custo se dá a falta de otimização entre os joins envolvendo 4 tabelas, processando milhões de linhas para calcular a valorização financeira do inventário por localidade.
+
+
+Em todas as consultas o motor do sgbd do Sqlite3 foi levado ao limite com processamentos completos das tabelas. O sgbd leu todos os dados, mesmo os que não eram necessários e isso aconteceu por falta de indice para otimizar as consultas, forçando o banco a ler todos os dados de forma cega no disco.
+
+Algumas consultas como a 2, 3 e 4 possuiam operações de agrupamento nas querys. O plano de execução indentificou que essas consultas precisariam criar arvores na memoria ou disco e isso ocorre porque o motor não possui dados semi ordenados por incices para realizar a agregação de forma direta, tendo sobrecarga de entrada e saida de dados.
+
+Essa parte do trabalho foi fundamental para entender que pequenas praticas são aquelas que definem se um banco de dados vai voar em desempenho e escalabilidade ou se o banco vai se tornar uma carroça lenta e com alto desperdicio de hardware.
+
+
+Com base nos gargalos apresentados no diagnostico, a estrategia de otimização foi voltada para resolver problemas de B tree e leitura completa e desnecessaria das tabelas por falta de indice.
+
+Para resolver as limitações de desempenho, foi criado indices em locais estrategicos para reduzir o full scan nas tabelas, sendo eles:
+
+Indice para filtragem de peças criadas utilizando as colunas QUANTIDADE_ESTOQUE e PRECO da tabela de PECAS. O objetivo aqui era organizar os dados no disco utilizando b tree, onde o motor do sgbd consegue encontrar os dados desejados utilizando o operador SEARCH USING INDEX evitando a leitura completa de todos os dados.
+
+O indice de cobertura para relacionamento e metricas foi criado utilizando a chave estrangeira e as colunas de agregação ID_PLATELEIRAS, PRECO e QUANTIDADE_ESTOQUE na tabela PECAS. Ele foi desenhado para tirar os gargalos de junções pesadas e cruzamentos de varias tabelas nas querys 2 e 4. Ela é um covering index que armazena na sua estrutura interna todos os atributos necessarios para resolver a projeção e as multiplicações de valores, evitando usar as tabelas fisicas no disco.
+
+E por fim o indice temporal para movimentações foi aplicado sobre a coluna DATA_MOVIMENTACAO da tabela MOVIMENTACAO_ESTOQUE que tem como objetivo otimizar consultas baseadas em intervalos de datas da query 3, o que permite a localização rapida do periodo desejado sem que o sgbd leia toda a tabela na ordem cronologica.
+
+
+Em arquitetura de bases de dados oltp não existe almoço grátis. Ao aplicar um indice o sgbd consegue otimizar mais as buscas no banco de dados, mais de contra partida deixa as operações de inserções, atualizações de remoções mais devagares porque sempre que algum dado por inserido, atualizado ou removido, o motor do sgbd precisará gravar a linha na tabela fisica original e terá também que recalcular, reposicionar e atualizar as arvores b tree de todos os indices afetados. A consequencia, as operações de escritas passam a ter mais latencia, reduzindo o desempenho de escritas e qualquer outra operação que não seja de leitura.
+
+Os indices são armazenos separadamente no meio da persistencia e isso pode consumir um grande volume de armazenamento em bancos com muitos dados registrados, exigindo o planejamento de capacidade de hardware.
+
+Como nesse trabalho o perfil é mais analitico, o custo de escrita gerado pelos indices é compensado pelos ganhos massivos de leitura e cruzamento de dados.
+
+
+Este trabalho foi aplicado em um ambiente oltp, abordando otimizações de leituras em bancos de dados “operacionais” utilizados no dia a dia, porém, para analise de negocios e consultas pesadas o ideal é utilizar de um banco de dados olap, modelado para ter o maximo de desempenho para consultas, aplicando diferentes estrategias de modelagem como o star schema, utilizar de banco de dados especializados como os data marts por exemplo.
+
+
